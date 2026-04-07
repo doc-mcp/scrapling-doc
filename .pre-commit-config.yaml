@@ -9,8 +9,7 @@ repos:
       - id: check-yaml
       - id: check-merge-conflict
       - id: check-added-large-files
-        with:
-          maxkb: 1024
+        args: [ "--maxkb=1024" ]
       - id: mixed-line-ending
         args: [ "--fix=auto" ]
 
