@@ -1,0 +1,25 @@
+{
+  "name": "Dev Container for Gitbook",
+  "image": "mcr.microsoft.com/devcontainers/base:noble",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "configureZshAsDefaultShell": true
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/git-lfs:1": {},
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/zenless-lab/devcontainer-features/uv:1": {}
+  },
+  "postCreateCommand": "uv tool install rust-just && uv tool install pre-commit && pre-commit install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "github.vscode-github-actions",
+        "editorconfig.editorconfig",
+        "davidanson.vscode-markdownlint",
+        "redhat.vscode-yaml",
+        "tamasfe.even-better-toml"
+      ]
+    }
+  }
+}

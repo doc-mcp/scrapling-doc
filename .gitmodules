@@ -1,0 +1,3 @@
+[submodule "3rdparty/Scrapling"]
+	path = 3rdparty/Scrapling
+	url = https://github.com/D4Vinci/Scrapling.git
