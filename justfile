@@ -11,7 +11,7 @@ ci: update-submodule docs
 
 # Initialize and update the Scrapling git submodule to latest remote commit
 update-submodule:
-    git submodule update --init --remote --recursive
+    git submodule update --init --recursive
 
 # Copy all docs from 3rdparty/Scrapling/docs/ into ./docs/
 copy-docs:
