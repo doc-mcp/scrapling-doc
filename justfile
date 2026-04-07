@@ -16,6 +16,8 @@ update-submodule:
 # Copy all docs from 3rdparty/Scrapling/docs/ into ./docs/
 copy-docs: update-submodule
     rsync -av --delete --exclude='.gitkeep' {{SCRAPLING_DOCS}}/ {{DOCS_DIR}}/
+    rm {{DOCS_DIR}}/README_*.md
+    cp {{SCRAPLING_SRC}}/README.md {{DOCS_DIR}}/README.md
 
 # Delete existing api-reference and regenerate it using pydoc-markdown
 regen-api-reference: update-submodule
