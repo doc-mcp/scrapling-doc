@@ -18,59 +18,11 @@ copy-docs: update-submodule
     rsync -av --delete --exclude='.gitkeep' {{SCRAPLING_DOCS}}/ {{DOCS_DIR}}/
 
 # Delete existing api-reference and regenerate it using pydoc-markdown
-regen-api-reference: _remove-api-reference _gen-selector _gen-fetchers _gen-custom-types _gen-response _gen-proxy-rotation _gen-spiders _gen-mcp-server
-
-_remove-api-reference: update-submodule
+regen-api-reference: update-submodule
     rm -rf {{API_REF_DIR}}
     mkdir -p {{API_REF_DIR}}
-
-_gen-selector: update-submodule
     uvx pydoc-markdown \
         -I {{SCRAPLING_SRC}} \
-        -m scrapling.parser \
+        -p scrapling \
         --no-render-toc \
-        > {{API_REF_DIR}}/selector.md
-
-_gen-fetchers: update-submodule
-    uvx pydoc-markdown \
-        -I {{SCRAPLING_SRC}} \
-        -m scrapling.fetchers \
-        --no-render-toc \
-        > {{API_REF_DIR}}/fetchers.md
-
-_gen-custom-types: update-submodule
-    uvx pydoc-markdown \
-        -I {{SCRAPLING_SRC}} \
-        -m scrapling.core.custom_types \
-        --no-render-toc \
-        > {{API_REF_DIR}}/custom-types.md
-
-_gen-response: update-submodule
-    uvx pydoc-markdown \
-        -I {{SCRAPLING_SRC}} \
-        -m scrapling.engines.toolbelt.custom \
-        --no-render-toc \
-        > {{API_REF_DIR}}/response.md
-
-_gen-proxy-rotation: update-submodule
-    uvx pydoc-markdown \
-        -I {{SCRAPLING_SRC}} \
-        -m scrapling.engines.toolbelt.proxy_rotation \
-        --no-render-toc \
-        > {{API_REF_DIR}}/proxy-rotation.md
-
-_gen-spiders: update-submodule
-    uvx pydoc-markdown \
-        -I {{SCRAPLING_SRC}} \
-        -m scrapling.spiders \
-        -m scrapling.spiders.result \
-        -m scrapling.spiders.session \
-        --no-render-toc \
-        > {{API_REF_DIR}}/spiders.md
-
-_gen-mcp-server: update-submodule
-    uvx pydoc-markdown \
-        -I {{SCRAPLING_SRC}} \
-        -m scrapling.core.ai \
-        --no-render-toc \
-        > {{API_REF_DIR}}/mcp-server.md
+        > {{API_REF_DIR}}/index.md
