@@ -1,5 +1,5 @@
 {
-  "name": "Dev Container for Gitbook",
+  "name": "Dev Container for GitBook",
   "image": "mcr.microsoft.com/devcontainers/base:noble",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
