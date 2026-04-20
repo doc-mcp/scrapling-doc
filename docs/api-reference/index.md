@@ -889,7 +889,7 @@ Perform a DELETE request and save the content to a file.
 @_common_browser_options
 def fetch(url, output_file, headless, disable_resources, network_idle, timeout,
           wait, css_selector, wait_selector, locale, real_chrome, proxy,
-          extra_headers, ai_targeted)
+          extra_headers, ai_targeted, dns_over_https, block_ads)
 ```
 
 Opens up a browser and fetch content using DynamicFetcher.
@@ -927,7 +927,8 @@ Opens up a browser and fetch content using DynamicFetcher.
 def stealthy_fetch(url, output_file, headless, disable_resources, network_idle,
                    timeout, wait, css_selector, wait_selector, locale,
                    real_chrome, proxy, extra_headers, block_webrtc,
-                   solve_cloudflare, allow_webgl, hide_canvas, ai_targeted)
+                   solve_cloudflare, allow_webgl, hide_canvas, ai_targeted,
+                   dns_over_https, block_ads)
 ```
 
 Opens up a browser with advanced stealth features and fetch content using StealthyFetcher.
@@ -1006,6 +1007,7 @@ class ScraplingMCPServer()
 ```python
 async def open_session(
         session_type: SessionType,
+        session_id: Optional[str] = None,
         headless: bool = True,
         google_search: bool = True,
         real_chrome: bool = False,
@@ -1038,6 +1040,7 @@ Use close_session to close the session when done, and list_sessions to see all a
 **Arguments**:
 
 - `session_type`: The type of session to open. Use "dynamic" for standard Playwright browser, or "stealthy" for anti-bot bypass with fingerprint spoofing.
+- `session_id`: Optional custom session ID. If not provided, a random 12-character hex ID will be generated. Useful for naming sessions for easier management.
 - `headless`: Run the browser in headless/hidden (default), or headful/visible mode.
 - `google_search`: Enabled by default, Scrapling will set a Google referer header.
 - `real_chrome`: If you have a Chrome browser installed on your device, enable this, and the Fetcher will launch an instance of your browser and use it.
@@ -1085,6 +1088,41 @@ async def list_sessions() -> List[SessionInfo]
 
 List all active browser sessions with their details.
 
+<a id="scrapling.core.ai.ScraplingMCPServer.screenshot"></a>
+
+#### screenshot
+
+```python
+async def screenshot(
+        url: str,
+        session_id: str,
+        image_type: ScreenshotType = "png",
+        full_page: bool = False,
+        quality: Optional[int] = None,
+        wait: int | float = 0,
+        wait_selector: Optional[str] = None,
+        wait_selector_state: SelectorWaitStates = "attached",
+        network_idle: bool = False,
+        timeout: int | float = 30000) -> List[ImageContent | TextContent]
+```
+
+Capture a screenshot of a web page using an existing browser session and return it as an image.
+
+A browser session must be opened first with `open_session` (either `dynamic` or `stealthy`); the session ID is then passed here.
+
+**Arguments**:
+
+- `url`: The URL to navigate to and capture.
+- `session_id`: ID of an open browser session created with `open_session`.
+- `image_type`: Image format. Defaults to "png". Use "jpeg" for smaller file sizes.
+- `full_page`: When True, captures the full scrollable page instead of just the viewport. Defaults to False.
+- `quality`: Image quality (0-100) for JPEG only. Raises if passed with `image_type="png"`.
+- `wait`: Time in milliseconds to wait after page load before capturing. Defaults to 0.
+- `wait_selector`: Optional CSS selector to wait for before capturing.
+- `wait_selector_state`: State to wait for the selector. Defaults to "attached".
+- `network_idle`: Wait for the page until there are no network connections for at least 500 ms.
+- `timeout`: Timeout in milliseconds for page operations. Defaults to 30,000.
+
 <a id="scrapling.core.ai.ScraplingMCPServer.get"></a>
 
 #### get
@@ -1131,7 +1169,8 @@ Note: If the `css_selector` resolves to more than one element, all the elements 
 - `headers`: Headers to include in the request.
 - `cookies`: Cookies to use in the request.
 - `timeout`: Number of seconds to wait before timing out.
-- `follow_redirects`: Whether to follow redirects. Defaults to "safe", which follows redirects but rejects those targeting internal/private IPs (SSRF protection). Pass True to follow all redirects without restriction.
+- `follow_redirects`: Whether to follow redirects. Defaults to "safe", which follows redirects but rejects those targeting internal/private IPs (SSRF protection).
+Pass True to follow all redirects without restriction.
 - `max_redirects`: Maximum number of redirects. Default 30, use -1 for unlimited.
 - `retries`: Number of retry attempts. Defaults to 3.
 - `retry_delay`: Number of seconds to wait between retry attempts. Defaults to 1 second.
@@ -1190,7 +1229,8 @@ Note: If the `css_selector` resolves to more than one element, all the elements 
 - `headers`: Headers to include in the request.
 - `cookies`: Cookies to use in the request.
 - `timeout`: Number of seconds to wait before timing out.
-- `follow_redirects`: Whether to follow redirects. Defaults to "safe", which follows redirects but rejects those targeting internal/private IPs (SSRF protection). Pass True to follow all redirects without restriction.
+- `follow_redirects`: Whether to follow redirects. Defaults to "safe", which follows redirects but rejects those targeting internal/private IPs (SSRF protection).
+Pass True to follow all redirects without restriction.
 - `max_redirects`: Maximum number of redirects. Default 30, use -1 for unlimited.
 - `retries`: Number of retry attempts. Defaults to 3.
 - `retry_delay`: Number of seconds to wait between retry attempts. Defaults to 1 second.
@@ -3250,6 +3290,15 @@ Takes `curl_cffi` response and generates `Response` object from it.
 
 A `Response` object that is the same as `Selector` object except it has these added attributes: `status`, `reason`, `cookies`, `headers`, and `request_headers`
 
+<a id="scrapling.engines.toolbelt.ad_domains"></a>
+
+# scrapling.engines.toolbelt.ad\_domains
+
+Built-in ad/tracker domain list for use with block_ads=True.
+
+Source: Peter Lowe's ad and tracking server list https://pgl.yoyo.org/adservers/
+Used config: https://pgl.yoyo.org/adservers/serverlist.php?hostformat=plain&showintro=0&startyear=2000&mimetype=plaintext
+
 <a id="scrapling.engines.toolbelt.custom"></a>
 
 # scrapling.engines.toolbelt.custom
@@ -3483,7 +3532,8 @@ Requests dropped are of type `font`, `image`, `media`, `beacon`, `object`, `imag
 - `network_idle`: Wait for the page until there are no network connections for at least 500 ms.
 - `timeout`: The timeout in milliseconds that is used in all operations and waits through the page. The default is 30,000
 - `wait`: The time (milliseconds) the fetcher will wait after everything finishes before closing the page and returning the ` Response ` object.
-- `page_action`: Added for automation. A function that takes the `page` object and does the automation you need.
+- `page_action`: Added for automation. A function that takes the `page` object, runs after navigation, and does the automation you need.
+- `page_setup`: A function that takes the `page` object, runs before navigation. Use it to register event listeners or routes that must be set up before the page loads.
 - `wait_selector`: Wait for a specific CSS selector to be in a specific state.
 - `init_script`: An absolute path to a JavaScript file to be executed on page creation for all pages in this session.
 - `locale`: Specify user locale, for example, `en-GB`, `de-DE`, etc. Locale will affect navigator.language value, Accept-Language request header value as well as number and date formatting
@@ -3527,7 +3577,8 @@ Opens up the browser and do your request based on your chosen options.
 - `google_search`: Enabled by default, Scrapling will set a Google referer header.
 - `timeout`: The timeout in milliseconds that is used in all operations and waits through the page. The default is 30,000
 - `wait`: The time (milliseconds) the fetcher will wait after everything finishes before closing the page and returning the ` Response ` object.
-- `page_action`: Added for automation. A function that takes the `page` object and does the automation you need.
+- `page_action`: Added for automation. A function that takes the `page` object, runs after navigation, and does the automation you need.
+- `page_setup`: A function that takes the `page` object, runs before navigation. Use it to register event listeners or routes that must be set up before the page loads.
 - `extra_headers`: A dictionary of extra headers to add to the request. _The referer set by `google_search` takes priority over the referer set here if used together._
 - `disable_resources`: Drop requests for unnecessary resources for a speed boost.
 Requests dropped are of type `font`, `image`, `media`, `beacon`, `object`, `imageset`, `texttrack`, `websocket`, `csp_report`, and `stylesheet`.
@@ -3575,7 +3626,8 @@ Requests dropped are of type `font`, `image`, `media`, `beacon`, `object`, `imag
 - `load_dom`: Enabled by default, wait for all JavaScript on page(s) to fully load and execute.
 - `timeout`: The timeout in milliseconds that is used in all operations and waits through the page. The default is 30,000
 - `wait`: The time (milliseconds) the fetcher will wait after everything finishes before closing the page and returning the ` Response ` object.
-- `page_action`: Added for automation. A function that takes the `page` object and does the automation you need.
+- `page_action`: Added for automation. A function that takes the `page` object, runs after navigation, and does the automation you need.
+- `page_setup`: A function that takes the `page` object, runs before navigation. Use it to register event listeners or routes that must be set up before the page loads.
 - `wait_selector`: Wait for a specific CSS selector to be in a specific state.
 - `init_script`: An absolute path to a JavaScript file to be executed on page creation for all pages in this session.
 - `locale`: Specify user locale, for example, `en-GB`, `de-DE`, etc. Locale will affect navigator.language value, Accept-Language request header value as well as number and date formatting
@@ -3619,7 +3671,8 @@ Opens up the browser and do your request based on your chosen options.
 - `google_search`: Enabled by default, Scrapling will set a Google referer header.
 - `timeout`: The timeout in milliseconds that is used in all operations and waits through the page. The default is 30,000
 - `wait`: The time (milliseconds) the fetcher will wait after everything finishes before closing the page and returning the ` Response ` object.
-- `page_action`: Added for automation. A function that takes the `page` object and does the automation you need.
+- `page_action`: Added for automation. A function that takes the `page` object, runs after navigation, and does the automation you need.
+- `page_setup`: A function that takes the `page` object, runs before navigation. Use it to register event listeners or routes that must be set up before the page loads.
 - `extra_headers`: A dictionary of extra headers to add to the request. _The referer set by `google_search` takes priority over the referer set here if used together._
 - `disable_resources`: Drop requests for unnecessary resources for a speed boost.
 Requests dropped are of type `font`, `image`, `media`, `beacon`, `object`, `imageset`, `texttrack`, `websocket`, `csp_report`, and `stylesheet`.
@@ -3674,7 +3727,8 @@ Requests dropped are of type `font`, `image`, `media`, `beacon`, `object`, `imag
 - `network_idle`: Wait for the page until there are no network connections for at least 500 ms.
 - `timeout`: The timeout in milliseconds that is used in all operations and waits through the page. The default is 30,000
 - `wait`: The time (milliseconds) the fetcher will wait after everything finishes before closing the page and returning the ` Response ` object.
-- `page_action`: Added for automation. A function that takes the `page` object and does the automation you need.
+- `page_action`: Added for automation. A function that takes the `page` object, runs after navigation, and does the automation you need.
+- `page_setup`: A function that takes the `page` object, runs before navigation. Use it to register event listeners or routes that must be set up before the page loads.
 - `wait_selector`: Wait for a specific CSS selector to be in a specific state.
 - `init_script`: An absolute path to a JavaScript file to be executed on page creation for all pages in this session.
 - `locale`: Specify user locale, for example, `en-GB`, `de-DE`, etc. Locale will affect navigator.language value, Accept-Language request header value as well as number and date formatting
@@ -3722,7 +3776,8 @@ Opens up the browser and do your request based on your chosen options.
 - `google_search`: Enabled by default, Scrapling will set a Google referer header.
 - `timeout`: The timeout in milliseconds that is used in all operations and waits through the page. The default is 30,000
 - `wait`: The time (milliseconds) the fetcher will wait after everything finishes before closing the page and returning the ` Response ` object.
-- `page_action`: Added for automation. A function that takes the `page` object and does the automation you need.
+- `page_action`: Added for automation. A function that takes the `page` object, runs after navigation, and does the automation you need.
+- `page_setup`: A function that takes the `page` object, runs before navigation. Use it to register event listeners or routes that must be set up before the page loads.
 - `extra_headers`: A dictionary of extra headers to add to the request. _The referer set by `google_search` takes priority over the referer set here if used together._
 - `disable_resources`: Drop requests for unnecessary resources for a speed boost.
 Requests dropped are of type `font`, `image`, `media`, `beacon`, `object`, `imageset`, `texttrack`, `websocket`, `csp_report`, and `stylesheet`.
@@ -3770,7 +3825,8 @@ Requests dropped are of type `font`, `image`, `media`, `beacon`, `object`, `imag
 - `network_idle`: Wait for the page until there are no network connections for at least 500 ms.
 - `timeout`: The timeout in milliseconds that is used in all operations and waits through the page. The default is 30,000
 - `wait`: The time (milliseconds) the fetcher will wait after everything finishes before closing the page and returning the ` Response ` object.
-- `page_action`: Added for automation. A function that takes the `page` object and does the automation you need.
+- `page_action`: Added for automation. A function that takes the `page` object, runs after navigation, and does the automation you need.
+- `page_setup`: A function that takes the `page` object, runs before navigation. Use it to register event listeners or routes that must be set up before the page loads.
 - `wait_selector`: Wait for a specific CSS selector to be in a specific state.
 - `init_script`: An absolute path to a JavaScript file to be executed on page creation for all pages in this session.
 - `locale`: Specify user locale, for example, `en-GB`, `de-DE`, etc. Locale will affect navigator.language value, Accept-Language request header value as well as number and date formatting
@@ -3818,7 +3874,8 @@ Opens up the browser and do your request based on your chosen options.
 - `google_search`: Enabled by default, Scrapling will set a Google referer header.
 - `timeout`: The timeout in milliseconds that is used in all operations and waits through the page. The default is 30,000
 - `wait`: The time (milliseconds) the fetcher will wait after everything finishes before closing the page and returning the ` Response ` object.
-- `page_action`: Added for automation. A function that takes the `page` object and does the automation you need.
+- `page_action`: Added for automation. A function that takes the `page` object, runs after navigation, and does the automation you need.
+- `page_setup`: A function that takes the `page` object, runs before navigation. Use it to register event listeners or routes that must be set up before the page loads.
 - `extra_headers`: A dictionary of extra headers to add to the request. _The referer set by `google_search` takes priority over the referer set here if used together._
 - `disable_resources`: Drop requests for unnecessary resources for a speed boost.
 Requests dropped are of type `font`, `image`, `media`, `beacon`, `object`, `imageset`, `texttrack`, `websocket`, `csp_report`, and `stylesheet`.
@@ -4551,13 +4608,16 @@ Opens up a browser and do your request based on your chosen options below.
 - `headless`: Run the browser in headless/hidden (default), or headful/visible mode.
 - `disable_resources`: Drop requests for unnecessary resources for a speed boost.
 - `blocked_domains`: A set of domain names to block requests to. Subdomains are also matched (e.g., ``"example.com"`` blocks ``"sub.example.com"`` too).
+- `block_ads`: Block requests to ~3,500 known ad/tracking domains. Can be combined with ``blocked_domains``.
+- `dns_over_https`: Route DNS queries through Cloudflare's DNS-over-HTTPS to prevent DNS leaks when using proxies.
 - `useragent`: Pass a useragent string to be used. Otherwise the fetcher will generate a real Useragent of the same browser and use it.
 - `cookies`: Set cookies for the next request.
 - `network_idle`: Wait for the page until there are no network connections for at least 500 ms.
 - `load_dom`: Enabled by default, wait for all JavaScript on page(s) to fully load and execute.
 - `timeout`: The timeout in milliseconds that is used in all operations and waits through the page. The default is 30,000
 - `wait`: The time (milliseconds) the fetcher will wait after everything finishes before closing the page and returning the Response object.
-- `page_action`: Added for automation. A function that takes the `page` object and does the automation you need.
+- `page_action`: Added for automation. A function that takes the `page` object, runs after navigation, and does the automation you need.
+- `page_setup`: A function that takes the `page` object, runs before navigation. Use it to register event listeners or routes that must be set up before the page loads.
 - `wait_selector`: Wait for a specific CSS selector to be in a specific state.
 - `init_script`: An absolute path to a JavaScript file to be executed on page creation with this request.
 - `locale`: Set the locale for the browser if wanted. Defaults to the system default locale.
@@ -4593,13 +4653,16 @@ Opens up a browser and do your request based on your chosen options below.
 - `headless`: Run the browser in headless/hidden (default), or headful/visible mode.
 - `disable_resources`: Drop requests for unnecessary resources for a speed boost.
 - `blocked_domains`: A set of domain names to block requests to. Subdomains are also matched (e.g., ``"example.com"`` blocks ``"sub.example.com"`` too).
+- `block_ads`: Block requests to ~3,500 known ad/tracking domains. Can be combined with ``blocked_domains``.
+- `dns_over_https`: Route DNS queries through Cloudflare's DNS-over-HTTPS to prevent DNS leaks when using proxies.
 - `useragent`: Pass a useragent string to be used. Otherwise the fetcher will generate a real Useragent of the same browser and use it.
 - `cookies`: Set cookies for the next request.
 - `network_idle`: Wait for the page until there are no network connections for at least 500 ms.
 - `load_dom`: Enabled by default, wait for all JavaScript on page(s) to fully load and execute.
 - `timeout`: The timeout in milliseconds that is used in all operations and waits through the page. The default is 30,000
 - `wait`: The time (milliseconds) the fetcher will wait after everything finishes before closing the page and returning the Response object.
-- `page_action`: Added for automation. A function that takes the `page` object and does the automation you need.
+- `page_action`: Added for automation. A function that takes the `page` object, runs after navigation, and does the automation you need.
+- `page_setup`: A function that takes the `page` object, runs before navigation. Use it to register event listeners or routes that must be set up before the page loads.
 - `wait_selector`: Wait for a specific CSS selector to be in a specific state.
 - `init_script`: An absolute path to a JavaScript file to be executed on page creation with this request.
 - `locale`: Set the locale for the browser if wanted. Defaults to the system default locale.
@@ -4657,12 +4720,15 @@ Opens up a browser and do your request based on your chosen options below.
 - `disable_resources`: Drop requests for unnecessary resources for a speed boost.
 Requests dropped are of type `font`, `image`, `media`, `beacon`, `object`, `imageset`, `texttrack`, `websocket`, `csp_report`, and `stylesheet`.
 - `blocked_domains`: A set of domain names to block requests to. Subdomains are also matched (e.g., ``"example.com"`` blocks ``"sub.example.com"`` too).
+- `block_ads`: Block requests to ~3,500 known ad/tracking domains. Can be combined with ``blocked_domains``.
+- `dns_over_https`: Route DNS queries through Cloudflare's DNS-over-HTTPS to prevent DNS leaks when using proxies.
 - `useragent`: Pass a useragent string to be used. Otherwise the fetcher will generate a real Useragent of the same browser and use it.
 - `cookies`: Set cookies for the next request.
 - `network_idle`: Wait for the page until there are no network connections for at least 500 ms.
 - `timeout`: The timeout in milliseconds that is used in all operations and waits through the page. The default is 30,000
 - `wait`: The time (milliseconds) the fetcher will wait after everything finishes before closing the page and returning the ` Response ` object.
-- `page_action`: Added for automation. A function that takes the `page` object and does the automation you need.
+- `page_action`: Added for automation. A function that takes the `page` object, runs after navigation, and does the automation you need.
+- `page_setup`: A function that takes the `page` object, runs before navigation. Use it to register event listeners or routes that must be set up before the page loads.
 - `wait_selector`: Wait for a specific CSS selector to be in a specific state.
 - `init_script`: An absolute path to a JavaScript file to be executed on page creation for all pages in this session.
 - `locale`: Specify user locale, for example, `en-GB`, `de-DE`, etc. Locale will affect navigator.language value, Accept-Language request header value as well as number and date formatting
@@ -4707,12 +4773,15 @@ Opens up a browser and do your request based on your chosen options below.
 - `disable_resources`: Drop requests for unnecessary resources for a speed boost.
 Requests dropped are of type `font`, `image`, `media`, `beacon`, `object`, `imageset`, `texttrack`, `websocket`, `csp_report`, and `stylesheet`.
 - `blocked_domains`: A set of domain names to block requests to. Subdomains are also matched (e.g., ``"example.com"`` blocks ``"sub.example.com"`` too).
+- `block_ads`: Block requests to ~3,500 known ad/tracking domains. Can be combined with ``blocked_domains``.
+- `dns_over_https`: Route DNS queries through Cloudflare's DNS-over-HTTPS to prevent DNS leaks when using proxies.
 - `useragent`: Pass a useragent string to be used. Otherwise the fetcher will generate a real Useragent of the same browser and use it.
 - `cookies`: Set cookies for the next request.
 - `network_idle`: Wait for the page until there are no network connections for at least 500 ms.
 - `timeout`: The timeout in milliseconds that is used in all operations and waits through the page. The default is 30,000
 - `wait`: The time (milliseconds) the fetcher will wait after everything finishes before closing the page and returning the ` Response ` object.
-- `page_action`: Added for automation. A function that takes the `page` object and does the automation you need.
+- `page_action`: Added for automation. A function that takes the `page` object, runs after navigation, and does the automation you need.
+- `page_setup`: A function that takes the `page` object, runs before navigation. Use it to register event listeners or routes that must be set up before the page loads.
 - `wait_selector`: Wait for a specific CSS selector to be in a specific state.
 - `init_script`: An absolute path to a JavaScript file to be executed on page creation for all pages in this session.
 - `locale`: Specify user locale, for example, `en-GB`, `de-DE`, etc. Locale will affect navigator.language value, Accept-Language request header value as well as number and date formatting
